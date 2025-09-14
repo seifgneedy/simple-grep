@@ -2,8 +2,7 @@ use std::{env, fs, process, error::Error};
 use simple_grep::{search, search_case_insensitive};
 // cargo run -- searchstring example-filename.txt
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let config = Config::build(&args).unwrap_or_else(|err| {
+    let config = Config::build(env::args()).unwrap_or_else(|err| {
         eprintln!("Error Parsing arguments {err}");
         process::exit(1);
     });
@@ -36,13 +35,23 @@ struct Config {
 }
 
 impl Config {
-    fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not enough arguments")
-        }
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-        let ignore_case = if args.contains(&"-i".to_string()) { true } else { env::var("IGNORE_CASE").is_ok() };
+    fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        args.next(); // Skip first argument
+        let query = match args.next() {
+            Some(query) => query,
+            None => return Err("Didn't get a query string")
+        };
+        let file_path = match args.next() {
+            Some(path) => path,
+            None => return Err("Didn't get path string")
+            
+        };
+        let ignore_case = match args.next() {
+            Some(input) => {
+                if input == "-i" {true} else {false}
+            },
+            None => env::var("IGNORE_CASE").is_ok()
+        };
         Ok(Config { query, file_path, ignore_case })
     }
 }
